@@ -168,6 +168,8 @@ Create a portal container at the root of your app:
 Then pass it to Joyride:
 
 ```tsx
+import { useJoyride } from 'react-joyride';
+
 const { Tour } = useJoyride({
   portalElement: '#joyride-portal',
   steps: [
@@ -202,3 +204,102 @@ const { Tour } = useJoyride({
 <Callout type="demo" title="See it in action">
 The [Modal](/demos/modal) demo shows tours inside both HeroUI and react-modal dialogs.
 </Callout>
+
+## Restarting a Tour
+
+Reset progress and start over from the first step in a single call. `controls.reset(true)` clears the index, lifecycle, and waiting flags, then sets the status to running.
+
+```tsx
+import { useJoyride } from 'react-joyride';
+
+function App() {
+  const { controls, Tour } = useJoyride({ continuous: true, steps });
+
+  return (
+    <>
+      <button onClick={() => controls.reset(true)}>Restart tour</button>
+      {Tour}
+    </>
+  );
+}
+```
+
+Pass `true` to relaunch immediately; omit the argument to clear progress without starting.
+
+You can also restart from inside an event handler — `onEvent` receives `controls` as its second argument:
+
+```tsx
+import { useJoyride } from 'react-joyride';
+
+useJoyride({
+  steps,
+  onEvent: (data, controls) => {
+    if (data.type === 'tour:end') {
+      controls.reset(true);
+    }
+  },
+});
+```
+
+<Callout type="tip">
+`reset()` is a no-op in controlled mode — when you pass <Code color="primary">stepIndex</Code>, the parent owns the index. Drive the restart from your own state instead.
+</Callout>
+
+## Using the Hook in Next.js (App Router)
+
+Both `<Joyride>` and `useJoyride` are render-safe on the server — they return `null` for the tour element until hydration. React Server Components still forbid hooks anywhere, so the hook itself must live behind a `'use client'` boundary. Drop that client component into a server page as an island.
+
+### Tour island
+
+```tsx
+// app/_components/OnboardingTour.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { useJoyride } from 'react-joyride';
+
+const steps = [
+  { target: '[data-tour="dashboard"]', content: 'Your dashboard.' },
+  { target: '[data-tour="settings"]', content: 'Settings live here.' },
+];
+
+export default function OnboardingTour() {
+  const { controls, on, Tour } = useJoyride({ continuous: true, steps });
+
+  useEffect(
+    () => on('tour:end', () => localStorage.setItem('onboarded', '1')),
+    [on],
+  );
+
+  useEffect(() => {
+    if (!localStorage.getItem('onboarded')) {
+      controls.start();
+    }
+  }, [controls]);
+
+  return Tour;
+}
+```
+
+### Server page
+
+```tsx
+// app/page.tsx
+import OnboardingTour from './_components/OnboardingTour';
+
+export default function Page() {
+  return (
+    <>
+      <main>
+        <section data-tour="dashboard">...</section>
+        <section data-tour="settings">...</section>
+      </main>
+      <OnboardingTour />
+    </>
+  );
+}
+```
+
+The page stays a server component; only the tour ships as a client island. Targets resolve once the page hydrates.
+
+If you don't need access to `controls` or `on`, render `<Joyride>` directly inside any client component — its DOM guard handles SSR automatically.
