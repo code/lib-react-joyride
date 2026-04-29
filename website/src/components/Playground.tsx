@@ -205,17 +205,13 @@ export default function Playground(props: PlaygroundProps) {
     return (
       <>
         <Tooltip
-          classNames={{
-            base: 'before:right-5!',
-          }}
           content="Open Playground"
           {...(!seen ? { isOpen: true } : {})}
           placement="bottom-end"
           showArrow
         >
           <Button
-            className="fixed top-20 right-4 rounded-full print:hidden"
-            color="primary"
+            className="fixed top-20 right-4 bg-black/30 dark:bg-white/30 text-white/75 dark:text-black/75 print:hidden"
             isIconOnly
             onPress={() => {
               if (!seen) {
@@ -225,7 +221,7 @@ export default function Playground(props: PlaygroundProps) {
 
               onOpen();
             }}
-            size="lg"
+            radius="full"
           >
             <FlaskConicalIcon />
           </Button>
